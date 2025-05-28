@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Эмоция Айнасы - Amjilt Cyber School</title>
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #001f3f;
+      color: white;
+    }
+    section {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      min-height: 100vh;
+      animation: fadeIn 0.6s ease;
+      text-align: center;
+    }
+    section.active {
+      display: flex;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      max-width: 400px;
+      margin: 1rem auto;
+      text-align: left;
+    }
+    li {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+    }
+    button {
+      background: #00c6ff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 1rem;
+      margin-top: 20px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #009ecc;
+    }
+    #video-container {
+      position: relative;
+      width: 90vw;
+      max-width: 400px;
+      aspect-ratio: 4/3;
+      margin: 1rem auto;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+    }
+    video, canvas {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    #emoji {
+      font-size: 4rem;
+      margin-top: 10px;
+      transition: transform 0.3s ease-in-out;
+    }
+    #textStatus, #ageGender {
+      font-size: 1.2rem;
+      margin-top: 0.5rem;
+    }
+    .arrow-up {
+      font-size: 3rem;
+      animation: bounce 1s infinite;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    footer {
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.9rem;
+      background: #000814;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <section class="active" id="step-1">
+    <h1>Amjilt Cyber School</h1>
+    <h2>Эмоция Айнасы 🤖</h2>
+    <p>Бұл жүйе сіздің эмоцияңызды, жасыңызды және жынысыңызды таниды!</p>
+    <button onclick="nextStep()">Келесі</button>
+  </section>
+
+  <section id="step-2">
+    <h2>Қалай жұмыс істейді?</h2>
+    <ul>
+      <li>Камера арқылы бетіңіз сканерленеді.</li>
+      <li>Жүйе эмоцияңызды (қуанышты, ашулы, таңданған т.б.) анықтайды.</li>
+      <li>Солай-ақ жасыңыз бен жынысыңызды болжайды.</li>
+    </ul>
+    <button onclick="nextStep()">Келесі</button>
+  </section>
+
+  <section id="step-3">
+    <h2>Камераға рұқсат беріңіз</h2>
+    <p>Камераны қолдану үшін жоғарғы бөліктегі хабарламада "Рұқсат беру" түймесін басыңыз 👇</p>
+    <div class="arrow-up">☝️</div>
+    <button onclick="requestCameraAccess()">Рұқсат сұрау</button>
+  </section>
+
+  <section id="step-4">
+    <h2>Эмоцияны Танушы</h2>
+    <p>Камераға қарап тұрыңыз 👀</p>
+    <div id="video-container">
+      <video id="video" autoplay muted></video>
+      <canvas id="canvas"></canvas>
+    </div>
+    <div id="emoji">😐</div>
+    <div id="textStatus">Күй: анықталмады</div>
+    <div id="ageGender">Жасы: -- | Жынысы: --</div>
+  </section>
+
+  <footer>
+    <p>&copy; 2023 Amjilt Cyber School | Жасаған команда 🤍</p>
+  </footer>
+
+  <script>
+    let currentStep = 1;
+    function nextStep() {
+      document.getElementById(`step-${currentStep}`).classList.remove('active');
+      currentStep++;
+      document.getElementById(`step-${currentStep}`).classList.add('active');
+    }
+
+    async function requestCameraAccess() {
+      try {
+        await navigator.mediaDevices.getUserMedia({ video: true });
+        nextStep();
+        runEmotionDetection();
+      } catch (e) {
+        alert('Камераға рұқсат берілмеді. Жоба жұмыс істеуі үшін камера қажет.');
+      }
+    }
+
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const textStatus = document.getElementById('textStatus');
+    const app = document.getElementById('step-4');
+    const emoji = document.getElementById('emoji');
+    const ageGender = document.getElementById('ageGender');
+
+    const statusIcons = {
+      default: { emoji: '😐', color: '#02c19c', label: 'Анықталмады' },
+      neutral: { emoji: '😐', color: '#54adad', label: 'Бейтарап' },
+      happy: { emoji: '😀', color: '#148f77', label: 'Көңілді' },
+      sad: { emoji: '😥', color: '#767e7e', label: 'Қапалы' },
+      angry: { emoji: '😠', color: '#b64518', label: 'Ашулы' },
+      fearful: { emoji: '😨', color: '#90931d', label: 'Қорқынышты' },
+      disgusted: { emoji: '🤢', color: '#1a8d1a', label: 'Жиіркенішті' },
+      surprised: { emoji: '😲', color: '#1230ce', label: 'Таңғалған' },
+    };
+
+    async function startVideo() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+      } catch (err) {
+        console.error('Камера қатесі:', err);
+      }
+    }
+
+    async function runEmotionDetection() {
+      const MODEL_URL = './models';
+      await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+      await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
+      await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+      await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+      await faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL);
+      startVideo();
+    }
+
+    video.addEventListener('loadeddata', () => {
+      const displaySize = {
+        width: video.videoWidth,
+        height: video.videoHeight
+      };
+      faceapi.matchDimensions(canvas, displaySize);
+
+      setInterval(async () => {
+        const detections = await faceapi
+          .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+          .withFaceExpressions()
+          .withAgeAndGender();
+
+        const resizedDetections = faceapi.resizeResults(detections, displaySize);
+        canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+        faceapi.draw.drawDetections(canvas, resizedDetections);
+        faceapi.draw.drawFaceExpressions(canvas, resizedDetections);
+
+        if (detections.length > 0) {
+          detections.forEach((detection) => {
+            let status = 'default';
+            let highest = 0;
+            for (const [key, value] of Object.entries(detection.expressions)) {
+              if (value > highest) {
+                status = key;
+                highest = value;
+              }
+            }
+            emoji.innerHTML = statusIcons[status]?.emoji || '😐';
+            textStatus.innerHTML = `Күй: ${statusIcons[status]?.label || 'Анықталмады'}`;
+            app.style.backgroundColor = statusIcons[status]?.color || '#02c19c';
+
+            const roundedAge = Math.round(detection.age);
+            const gender = detection.gender === 'male' ? 'Ер' : 'Әйел';
+            ageGender.innerHTML = `Жасы: ${roundedAge} | Жынысы: ${gender}`;
+            emoji.style.transform = 'scale(1.2)';
+            setTimeout(() => emoji.style.transform = 'scale(1)', 200);
+          });
+        } else {
+          emoji.innerHTML = statusIcons.default.emoji;
+          textStatus.innerHTML = `Күй: ${statusIcons.default.label}`;
+          app.style.backgroundColor = statusIcons.default.color;
+          ageGender.innerHTML = 'Жасы: -- | Жынысы: --';
+        }
+      }, 500);
+    });
+  </script>
+</body>
+</html>
