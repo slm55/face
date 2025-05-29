@@ -145,22 +145,6 @@
 
   <script>
     let currentStep = 1;
-    function nextStep() {
-      document.getElementById(`step-${currentStep}`).classList.remove('active');
-      currentStep++;
-      document.getElementById(`step-${currentStep}`).classList.add('active');
-    }
-
-    async function requestCameraAccess() {
-      try {
-        await navigator.mediaDevices.getUserMedia({ video: true });
-        nextStep();
-        runEmotionDetection();
-      } catch (e) {
-        alert('Камераға рұқсат берілмеді. Жоба жұмыс істеуі үшін камера қажет.');
-      }
-    }
-
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const textStatus = document.getElementById('textStatus');
@@ -179,26 +163,35 @@
       surprised: { emoji: '😲', color: '#1230ce', label: 'Таңғалған' },
     };
 
-    async function startVideo() {
+    function nextStep() {
+      document.getElementById(`step-${currentStep}`).classList.remove('active');
+      currentStep++;
+      document.getElementById(`step-${currentStep}`).classList.add('active');
+    }
+
+    async function requestCameraAccess() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = stream;
-      } catch (err) {
-        console.error('Камера қатесі:', err);
+        nextStep();
+        loadModels();
+      } catch (e) {
+        alert('Камераға рұқсат берілмеді. Жоба жұмыс істеуі үшін камера қажет.');
       }
     }
 
-    async function runEmotionDetection() {
+    async function loadModels() {
       const MODEL_URL = './models';
-      await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
-      await faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL);
-      startVideo();
+      await Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+        faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL),
+      ]);
+      startDetection();
     }
 
-    video.addEventListener('loadeddata', () => {
+    function startDetection() {
       const displaySize = {
         width: video.videoWidth,
         height: video.videoHeight
@@ -212,7 +205,8 @@
           .withAgeAndGender();
 
         const resizedDetections = faceapi.resizeResults(detections, displaySize);
-        canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         faceapi.draw.drawDetections(canvas, resizedDetections);
         faceapi.draw.drawFaceExpressions(canvas, resizedDetections);
 
@@ -243,7 +237,7 @@
           ageGender.innerHTML = 'Жасы: -- | Жынысы: --';
         }
       }, 500);
-    });
+    }
   </script>
 </body>
 </html>
